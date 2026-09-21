@@ -226,27 +226,36 @@ def run_simulation():
     # -----------------------------------------------------------------------
     section("5 / 6  Peak-tracking resolution (Monte-Carlo)")
 
-    pt_res = peak_tracking_resolution(
-        lam,
-        p["lambda_B0"],
-        p["Gamma_fbg"],
-        p["sigma_I"],
-        N_trials=p["N_noise_trials"],
-        R0=p["R0"],
-        method="centroid",
-        rng_seed=42,
-    )
+    peak_methods = ("argmax", "centroid", "parabola")
+    pt_results = {
+        method: peak_tracking_resolution(
+            lam,
+            p["lambda_B0"],
+            p["Gamma_fbg"],
+            p["sigma_I"],
+            N_trials=p["N_noise_trials"],
+            R0=p["R0"],
+            method=method,
+            rng_seed=42,
+        )
+        for method in peak_methods
+    }
+    pt_res = pt_results["centroid"]
 
     print(f"  N trials:              {p['N_noise_trials']}")
-    print(f"  Mean estimate:         {pt_res['mean_estimate']:.6f} nm")
-    print(f"  Bias:                  {pt_res['bias'] * 1e3:.4f} pm")
-    print(f"  σ_λ (resolution):      {pt_res['std_estimate'] * 1e3:.4f} pm")
-    print(f"  Δλ_min (peak tracking):{pt_res['delta_lambda_min'] * 1e3:.4f} pm")
+    for method in peak_methods:
+        res = pt_results[method]
+        print(
+            f"  {method:<20}"
+            f"bias={res['bias'] * 1e3:>8.4f} pm, "
+            f"σ_λ={res['std_estimate'] * 1e3:>8.4f} pm"
+        )
+    print(f"  Δλ_min (peak tracking):{pt_res['delta_lambda_min'] * 1e3:.4f} pm (centroid)")
 
     plot_peak_tracking_distribution(
-        pt_res["lambda_B_estimates"],
+        {method: pt_results[method]["lambda_B_estimates"] for method in peak_methods},
         p["lambda_B0"],
-        pt_res["std_estimate"],
+        {method: pt_results[method]["std_estimate"] for method in peak_methods},
         output_dir=out,
     )
 
