@@ -464,9 +464,9 @@ def plot_slope(
 # ---------------------------------------------------------------------------
 
 def plot_peak_tracking_distribution(
-    lambda_B_estimates: np.ndarray,
+    method_estimates: dict,
     lambda_B_true: float,
-    std_estimate: float,
+    method_std: dict,
     output_dir: str = "output",
     filename: str = "peak_tracking_distribution.png",
 ):
@@ -475,26 +475,35 @@ def plot_peak_tracking_distribution(
 
     Parameters
     ----------
-    lambda_B_estimates : np.ndarray  Estimated λ_B values [nm].
-    lambda_B_true      : float       True Bragg wavelength [nm].
-    std_estimate       : float       Standard deviation of estimates [nm].
+    method_estimates : dict[str, np.ndarray]
+        Estimated λ_B arrays [nm] keyed by method name.
+    lambda_B_true : float
+        True Bragg wavelength [nm].
+    method_std : dict[str, float]
+        Standard deviation [nm] keyed by method name.
     output_dir         : str
     filename           : str
     """
     fig, ax = plt.subplots(figsize=(6, 4))
+    method_colors = {
+        "argmax": "#1b9e77",
+        "centroid": COLORS["pt"],
+        "parabola": "#7570b3",
+    }
 
-    ax.hist(
-        (lambda_B_estimates - lambda_B_true) * 1e3,  # show in pm
-        bins=60, color=COLORS["pt"], alpha=0.75, edgecolor="white",
-        label="Estimated $\\lambda_B$ offsets",
-    )
+    for method, estimates in method_estimates.items():
+        sigma_pm = method_std[method] * 1e3
+        ax.hist(
+            (estimates - lambda_B_true) * 1e3,
+            bins=60,
+            alpha=0.30,
+            color=method_colors.get(method, COLORS["pt"]),
+            label=f"{method}: $\\sigma$={sigma_pm:.2f} pm",
+        )
     ax.axvline(0, color="k", ls="--", lw=1.2, label="True $\\lambda_B$")
-    ax.axvline(-std_estimate * 1e3, color="grey", ls=":", lw=1.0)
-    ax.axvline(+std_estimate * 1e3, color="grey", ls=":",  lw=1.0,
-               label=fr"$\pm\sigma={std_estimate*1e3:.2f}$ pm")
 
     ax.set_xlabel(r"$\hat{\lambda}_B - \lambda_B$ (pm)")
     ax.set_ylabel("Counts")
-    ax.set_title("Peak-Tracking Noise Distribution (Monte-Carlo)")
+    ax.set_title("Peak-Tracking Method Comparison (Monte-Carlo)")
     ax.legend(fontsize=8)
     _save(fig, output_dir, filename)
